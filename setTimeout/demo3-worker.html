@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>demo1</title>
+</head>
+<body>
+  <div>
+    <div class="row">
+      <div class="row-title">理想时间：</div>
+      <input id="ideal-time" disabled></input>
+
+    </div>
+    <div class="row">
+      <div class="row-title">实际时间：</div>
+      <input id="real-time" disabled></input>
+    </div>
+    <div class="row">
+      <div class="row-title">差异：</div>
+      <input id="diff-time" disabled></input>
+    </div>
+    <div class="row">
+      <button id="start">开始</button>
+      <button id="stop">暂停</button>
+    </div>
+  </div>
+</body>
+<script>
+  const startBtn = document.querySelector('#start');
+  const stopBtn = document.querySelector('#stop');
+  const idealTimeDom = document.querySelector('#ideal-time');
+  const diffTimeDom = document.querySelector('#diff-time');
+  const realTimeDom = document.querySelector('#real-time');
+
+  // worker生成器
+  const createWorker = (fn, options) => {
+    const blob = new Blob(['(' + fn.toString() + ')()']);
+    const url = URL.createObjectURL(blob);
+    if (options) {
+        return new Worker(url, options);
+    }
+    return new Worker(url);
+  }
+
+  // worker 部分
+  const worker = createWorker(function () {
+    onmessage = function (e) {
+        const date = Date.now();
+        while (true) {
+            const now = Date.now();
+            if(now - date >= e.data) {
+                postMessage(1);
+                return;
+            }
+        }
+    }
+  })
+
+  let gapTime = 50,counter = 1, startTime = null, isStart = false;
+
+  function timer() {
+    isStart = true;
+    startTime = Date.now();
+    worker.postMessage(gapTime);
+    worker.onmessage = function() {
+      if (counter <= 50 && isStart ) {
+        timerCallback();
+        counter++;
+        worker.postMessage(gapTime);
+      }
+    }
+    //事件循环机制，同步代码阻塞下，加剧了误差时间
+    for(var x=1, i=0; i<1000000000; i++) { x *= (i + 1); }
+}
+
+function timerCallback() {
+    idealTimeDom.value = gapTime * counter;
+    realTimeDom.value = Date.now() - startTime;
+    diffTimeDom.value = realTimeDom.value - idealTimeDom.value;
+}
+
+
+  startBtn.addEventListener('click', timer);
+  stopBtn.addEventListener('click', () => {
+    isStart = false;
+    counter = 1;
+    idealTimeDom.value = '';
+    realTimeDom.value = '';
+    diffTimeDom.value = '';
+    startTime = Date.now();
+  });
+
+</script>
+<style>
+  .row-title {
+    width: 120px;
+  }
+  .row  div{
+    display: inline-block;
+  }
+</style>
+</html>

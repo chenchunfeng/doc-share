@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>demo1</title>
+</head>
+<body>
+  <div>
+    <div class="row">
+      <div class="row-title">理想时间：</div>
+      <input id="ideal-time" disabled></input>
+
+    </div>
+    <div class="row">
+      <div class="row-title">实际时间：</div>
+      <input id="real-time" disabled></input>
+    </div>
+    <div class="row">
+      <div class="row-title">差异：</div>
+      <input id="diff-time" disabled></input>
+    </div>
+    <div class="row">
+      <button id="start">开始</button>
+      <button id="stop">暂停</button>
+    </div>
+  </div>
+</body>
+<script>
+  const startBtn = document.querySelector('#start');
+  const stopBtn = document.querySelector('#stop');
+  const idealTimeDom = document.querySelector('#ideal-time');
+  const diffTimeDom = document.querySelector('#diff-time');
+  const realTimeDom = document.querySelector('#real-time');
+
+  const timerArray = []
+
+  function timer() {
+    let gapTime = 50,
+    counter = 1;
+    startTime = Date.now();
+
+    function instance() {
+      // 间隔乘以次数就是理想时间
+      const ideal = gapTime * counter;
+      const real = Date.now() - startTime;
+      idealTimeDom.value = ideal;
+      realTimeDom.value = real;
+
+      diffTimeDom.value = real - ideal;
+      // 方便对比
+      if (counter === 50) return; 
+      counter++;
+      setTimeout2(instance, gapTime);
+      // 事件循环机制，同步代码阻塞下，加剧了误差时间
+      for(var x=1, i=0; i<10000000; i++) { x *= (i + 1); } 
+    }
+
+    setTimeout2(instance, gapTime);
+
+
+  }
+
+  startBtn.addEventListener('click', timer);
+  stopBtn.addEventListener('click', () => {
+    timerArray.forEach(item => {
+      item && clearTimeout(item); 
+    })
+  });
+
+
+  // 使用requestAnimation来模拟setTimeout
+  function setTimeout2(fn, delay) {
+    const startTime = Date.now();
+    loop();
+
+    function loop() {
+      if(Date.now() - startTime >= delay) {
+        fn();
+        return;
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    return null;
+
+  }
+
+</script>
+<style>
+  .row-title {
+    width: 120px;
+  }
+  .row  div{
+    display: inline-block;
+  }
+</style>
+</html>
