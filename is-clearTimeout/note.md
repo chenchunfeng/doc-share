@@ -55,6 +55,7 @@
     })
   }
   ticker();
+  console.log(timer)
   clearTimeout(timer);  // bug: 执行到这里的时候，timer还没赋值
 ```
 
@@ -178,4 +179,106 @@
 1. 开发人员js事件循环不熟悉，导致bug出现。
 2. 个人认为修复bug的第1种方法，比第二种好。理由是代码改动小。改别人的代码还是得小心爆雷。
 
+#### 业务解耦一 
 
+```javascript
+export class Poll {
+  constructor(workPromise, gapTime = 2000) {
+    this.workFunc = () => {
+      return new Promise(async resolve => {
+        await workPromise();
+        resolve();
+      });
+    };
+    this.gapTime = gapTime;
+    this.timerId = null;
+    this.isPolling = false;
+    this.missCount = 0;
+  }
+
+  polling() {
+    if (!this.isPolling) return;
+
+    this.workFunc()
+      .then(() => {
+        this.timerId = setTimeout(() => {
+          this.clear();
+          this.polling();
+        }, this.gapTime);
+      })
+      .catch(() => {
+        this.missCount++;
+        if (this.missCount >= 3) {
+          this.destroy();
+        } else {
+          this.polling();
+        }
+      });
+  }
+
+  start() {
+    this.isPolling = true;
+    this.polling();
+  }
+
+  stop() {
+    this.isPolling = false;
+  }
+
+  clear() {
+    this.timerId && clearTimeout(this.timerId);
+  }
+
+  destroy() {
+    this.stop();
+    this.clear();
+  }
+}
+
+```
+
+#### 业务解耦二
+
+不封装循环setTimeout逻辑, 让用户自己实现，逻辑更清楚，但需一定的编码
+
+封装一个延时函数即可
+
+```javascript
+
+function sleep(gapTime, ref) {
+  return new Promise((resolve, reject) => {
+    const timerId = setTimeout(() => {
+      resolve();
+    }, gapTime)
+
+    ref.source =  Axios.CancelToken.source();
+    ref.source.cancel = (reason) => {
+      clearTimeout(timerId);
+      reject(Axios.Cancel(reason))
+    }
+  })
+}
+
+
+// 业务逻辑
+async poll() {
+  while(true) {
+    const ref = this;
+    await sleep(2000, ref);
+    await fetchRecordData(ref);
+  }
+}
+fetchRecordData(ref) {
+  this.source = Axios.CancelToken.source();
+  axios.post('url', {}, {CancelToken: this.source.token}).then(res => {
+    this.source = null;
+  }).catch(e => {
+    // Axios.isCancel(e)
+  })
+}
+abort() {
+  this.source.cancel('cancel');
+}
+
+
+```
