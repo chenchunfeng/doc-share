@@ -1,3 +1,6 @@
+
+<img src="./image/1.jpg" />
+
 **解决文案一**
 
 使用while true 霸占线程，计算时间间隔来模拟setTimeout
@@ -13,3 +16,5 @@
 **解决文案三 requestAnimationFrame**
 
 使用requestAnimationFrame来模拟setTimeout
+
+<img src="./image/2.webp" />
